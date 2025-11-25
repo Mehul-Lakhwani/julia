@@ -274,7 +274,7 @@ end
         n = map(String, split(names, '.'))
         pkg = recurse_package(n...)
         @test pkg == PkgId(UUID(uuid), n[end])
-        @test joinpath(@__DIR__, normpath(path)) == locate_package(pkg)
+        @test samefile(joinpath(@__DIR__, path), locate_package(pkg))
         @test Base.compilecache_path(pkg, UInt64(0)) == Base.compilecache_path(pkg, UInt64(0))
     end
     @test identify_package("Baz") === nothing
@@ -350,19 +350,19 @@ module NotPkgModule; end
     @test Foo.which == "path"
 
     @testset "pathof" begin
-        @test pathof(Foo) == normpath(abspath(@__DIR__, "project/deps/Foo1/src/Foo.jl"))
+        @test samefile(pathof(Foo), joinpath(@__DIR__, "project/deps/Foo1/src/Foo.jl"))
         @test pathof(NotPkgModule) === nothing
     end
 
     @testset "pkgdir" begin
-        @test pkgdir(Foo) == normpath(abspath(@__DIR__, "project/deps/Foo1"))
-        @test pkgdir(Foo.SubFoo1) == normpath(abspath(@__DIR__, "project/deps/Foo1"))
-        @test pkgdir(Foo.SubFoo2) == normpath(abspath(@__DIR__, "project/deps/Foo1"))
+        @test samefile(pkgdir(Foo), joinpath(@__DIR__, "project/deps/Foo1"))
+        @test samefile(pkgdir(Foo.SubFoo1), joinpath(@__DIR__, "project/deps/Foo1"))
+        @test samefile(pkgdir(Foo.SubFoo2), joinpath(@__DIR__, "project/deps/Foo1"))
         @test pkgdir(NotPkgModule) === nothing
 
-        @test pkgdir(Foo, "src") == normpath(abspath(@__DIR__, "project/deps/Foo1/src"))
-        @test pkgdir(Foo.SubFoo1, "src") == normpath(abspath(@__DIR__, "project/deps/Foo1/src"))
-        @test pkgdir(Foo.SubFoo2, "src") == normpath(abspath(@__DIR__, "project/deps/Foo1/src"))
+        @test samefile(pkgdir(Foo, "src"), joinpath(@__DIR__, "project/deps/Foo1/src"))
+        @test samefile(pkgdir(Foo.SubFoo1, "src"), joinpath(@__DIR__, "project/deps/Foo1/src"))
+        @test samefile(pkgdir(Foo.SubFoo2, "src"), joinpath(@__DIR__, "project/deps/Foo1/src"))
         @test pkgdir(NotPkgModule, "src") === nothing
     end
 
@@ -1146,7 +1146,7 @@ end
         _ext = Base.get_extension(parent, ext)
         _ext isa Module || error("expected extension \$ext to be loaded")
         _pkgdir = pkgdir(_ext)
-        _pkgdir == pkgdir(parent) != nothing || error("unexpected extension \$ext pkgdir path: \$_pkgdir")
+        samefile(_pkgdir, pkgdir(parent)) || error("unexpected extension \$ext pkgdir path: \$_pkgdir")
         _pkgversion = pkgversion(_ext)
         _pkgversion == pkgversion(parent) || error("unexpected extension \$ext version: \$_pkgversion")
     end

@@ -386,6 +386,13 @@ julia> normpath("/home/myuser/../example.jl")
 julia> normpath("Documents/Julia") == joinpath("Documents", "Julia")
 true
 ```
+
+!!! warning
+    Normalization may change the meaning of a path if the directory immediately
+    preceding a ".." entry is a symbolic link. For example, if `a` is a symbolic
+    link in `a/../b`, then this path will resolve to `b` in the link target's
+    parent directory. Hoewver, `normpath("a/../b")` will return `b`, which will
+    resolve `b` in the current working directory.
 """
 function normpath(path::String)
     isabs = isabspath(path)
@@ -430,10 +437,10 @@ Convert a set of paths to a normalized path by joining them together and removin
 normpath(a::AbstractString, b::AbstractString...) = normpath(joinpath(a,b...))
 
 """
-    abspath(path::AbstractString)::String
+    abspath(path::AbstractString; normalize=true)::String
 
 Convert a path to an absolute path by adding the current directory if necessary.
-Also normalizes the path as in [`normpath`](@ref).
+If `normalize` is true, also normalizes the path as in [`normpath`](@ref).
 
 # Examples
 
@@ -444,8 +451,11 @@ If you are in a directory called `JuliaExample` and the data you are using is tw
 Which gives a path like `"/home/JuliaUser/data/"`.
 
 See also [`joinpath`](@ref), [`pwd`](@ref), [`expanduser`](@ref).
+
+!!! compat "Julia 1.14"
+    The `normalize` keyword argument was added in Julia 1.14.
 """
-function abspath(a::String)::String
+function abspath(a::String; normalize=true)::String
     if !isabspath(a)
         cwd = pwd()
         a_drive, a_nodrive = splitdrive(a)
@@ -456,7 +466,7 @@ function abspath(a::String)::String
             a = joinpath(cwd, a)
         end
     end
-    return normpath(a)
+    return normalize ? normpath(a) : a
 end
 
 """
@@ -465,7 +475,7 @@ end
 Convert a set of paths to an absolute path by joining them together and adding the
 current directory if necessary. Equivalent to `abspath(joinpath(path, paths...))`.
 """
-abspath(a::AbstractString, b::AbstractString...) = abspath(joinpath(a,b...))
+abspath(a::AbstractString, b::AbstractString...; kwargs...) = abspath(joinpath(a,b...); kwargs...)
 
 if Sys.iswindows()
 
