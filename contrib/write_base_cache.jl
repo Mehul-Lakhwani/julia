@@ -2,6 +2,7 @@
 cachefile = ARGS[1]
 open(cachefile, "w") do io
     for (_, filename) in Base._included_files
+        filename = realpath(filename)
         src = read(filename, String)
         write(io, Int32(sizeof(filename)))
         write(io, filename)

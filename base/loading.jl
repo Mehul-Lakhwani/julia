@@ -3596,6 +3596,7 @@ function CacheHeaderIncludes(dep_tuple::Tuple{Module, String, UInt64, UInt32, Fl
 end
 
 function replace_depot_path(path::AbstractString, depots::Vector{String}=normalize_depots_for_relocation())
+    path = realpath(path)
     for depot in depots
         if startswith(path, string(depot, Filesystem.pathsep())) || path == depot
             path = replace(path, depot => "@depot"; count=1)
