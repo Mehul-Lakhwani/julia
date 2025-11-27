@@ -3595,10 +3595,27 @@ function CacheHeaderIncludes(dep_tuple::Tuple{Module, String, UInt64, UInt32, Fl
     return CacheHeaderIncludes(PkgId(dep_tuple[1]), dep_tuple[2:end]..., String[])
 end
 
-function replace_depot_path(path::AbstractString, depots::Vector{String}=normalize_depots_for_relocation())
-    path = realpath(path)
+function replace_depot_path(path::AbstractString, depots::Vector{Union{String, Tuple{String, String}}}=normalize_depots_for_relocation())
+    # We must handle several cases:
+    # 1. The depot itself is in a symlink'ed path
+    # 2. The files were symlinked into the depot
+    # 3. A combination of both
+    # The normalization looks up `realpath`. The simplest case is tha
+    this_realpath = realpath(path)
+    realpath_differs = this_realpath != path
     for depot in depots
-        if startswith(path, string(depot, Filesystem.pathsep())) || path == depot
+        if isa(depot, Tuple{String, String})
+            depotrealpath = depot[2]
+            depot = depot[1]
+        else
+            depotrealpath = depot
+        end
+        if startswith(this_realpath, string(depotrealpath, Filesystem.pathsep())) || this_realpath == depotrealpath
+            # Simplest case: The file's realpath is within the depot's realpath, simply replace and go on
+            path = replace(this_realpath, depotrealpath => "@depot"; count=1)
+            break
+        elseif realpath_differs && startswith(path, string(depot, Filesystem.pathsep())) || path == depot
+            # The file's original path was loaded from symlinks within the depot - n.b.: the path may still have `..` components
             path = replace(path, depot => "@depot"; count=1)
             break
         end
@@ -3607,14 +3624,20 @@ function replace_depot_path(path::AbstractString, depots::Vector{String}=normali
 end
 
 function normalize_depots_for_relocation()
-    depots = String[]
+    depots = Union{String, Tuple{String, String}}[]
     sizehint!(depots, length(DEPOT_PATH))
     for d in DEPOT_PATH
         isdir(d) || continue
         if isdirpath(d)
             d = dirname(d)
         end
-        push!(depots, realpath(d))
+        depotrealpath = realpath(d)
+        depotabspath = abspath(d)
+        if depotrealpath != depotabspath
+            push!(depots, (depotabspath, depotrealpath))
+        else
+            push!(depots, depotrealpath)
+        end
     end
     return depots
 end
