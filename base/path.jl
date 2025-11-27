@@ -391,7 +391,7 @@ true
     Normalization may change the meaning of a path if the directory immediately
     preceding a ".." entry is a symbolic link. For example, if `a` is a symbolic
     link in `a/../b`, then this path will resolve to `b` in the link target's
-    parent directory. Hoewver, `normpath("a/../b")` will return `b`, which will
+    parent directory. However, `normpath("a/../b")` will return `b`, which will
     resolve `b` in the current working directory.
 """
 function normpath(path::String)
